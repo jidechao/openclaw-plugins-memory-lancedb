@@ -1,0 +1,21 @@
+{
+  "name": "@openclaw/memory-lancedb-pro",
+  "version": "2026.2.16",
+  "private": true,
+  "description": "OpenClaw enhanced LanceDB memory plugin with hybrid retrieval and multi-scope isolation",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "@lancedb/lancedb": "^0.26.2",
+    "@sinclair/typebox": "0.34.48",
+    "openai": "^6.21.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
