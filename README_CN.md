@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 memory-lancedb-pro
+# 🧠 openclaw-plugins-memory-lancedb
 
 **[OpenClaw](https://github.com/openclaw/openclaw) 增强型 LanceDB 长期记忆插件**
 
@@ -18,9 +18,9 @@
 
 ## 为什么需要这个插件？
 
-OpenClaw 内置的 `memory-lancedb` 插件仅提供基本的向量搜索。**memory-lancedb-pro** 在此基础上进行了全面升级：
+OpenClaw 内置的 `memory-lancedb` 插件仅提供基本的向量搜索。**openclaw-plugins-memory-lancedb** 在此基础上进行了全面升级：
 
-| 功能 | 内置 `memory-lancedb` | **memory-lancedb-pro** |
+| 功能 | 内置 `memory-lancedb` | **openclaw-plugins-memory-lancedb** |
 |------|----------------------|----------------------|
 | 向量搜索 | ✅ | ✅ |
 | BM25 全文检索 | ❌ | ✅ |
