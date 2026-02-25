@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 memory-lancedb-pro
+# 🧠 openclaw-plugins-memory-lancedb
 
 **Enhanced Long-Term Memory Plugin for [OpenClaw](https://github.com/openclaw/openclaw)**
 
@@ -17,9 +17,9 @@ Hybrid Retrieval (Vector + BM25) · Cross-Encoder Rerank · Multi-Scope Isolatio
 
 ## Why This Plugin?
 
-The built-in `memory-lancedb` plugin in OpenClaw provides basic vector search. **memory-lancedb-pro** takes it much further:
+The built-in `memory-lancedb` plugin in OpenClaw provides basic vector search. **openclaw-plugins-memory-lancedb** takes it much further:
 
-| Feature | Built-in `memory-lancedb` | **memory-lancedb-pro** |
+| Feature | Built-in `memory-lancedb` | **openclaw-plugins-memory-lancedb** |
 |---------|--------------------------|----------------------|
 | Vector search | ✅ | ✅ |
 | BM25 full-text search | ❌ | ✅ |
