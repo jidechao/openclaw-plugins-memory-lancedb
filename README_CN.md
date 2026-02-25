@@ -1,18 +1,14 @@
-<div align="center">
-
 # 🧠 openclaw-plugins-memory-lancedb
 
 **[OpenClaw](https://github.com/openclaw/openclaw) 增强型 LanceDB 长期记忆插件**
 
-混合检索（Vector + BM25）· 跨编码器 Rerank · 多 Scope 隔离 · 管理 CLI
+混合检索（Vector + BM25）· 多 Reranker（Jina / SiliconFlow / 轻量级）· 多 Scope 隔离 · 自动备份 · 管理 CLI
 
 [![OpenClaw Plugin](https://img.shields.io/badge/OpenClaw-Plugin-blue)](https://github.com/openclaw/openclaw)
 [![LanceDB](https://img.shields.io/badge/LanceDB-Vectorstore-orange)](https://lancedb.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 [English](README.md) | **简体中文**
-
-</div>
 
 ---
 
@@ -26,6 +22,8 @@ OpenClaw 内置的 `memory-lancedb` 插件仅提供基本的向量搜索。**ope
 | BM25 全文检索 | ❌ | ✅ |
 | 混合融合（Vector + BM25） | ❌ | ✅ |
 | 跨编码器 Rerank（Jina） | ❌ | ✅ |
+| SiliconFlow Rerank | ❌ | ✅ |
+| 轻量级 Rerank（cosine） | ❌ | ✅ |
 | 时效性加成 | ❌ | ✅ |
 | 时间衰减 | ❌ | ✅ |
 | 长度归一化 | ❌ | ✅ |
@@ -33,6 +31,9 @@ OpenClaw 内置的 `memory-lancedb` 插件仅提供基本的向量搜索。**ope
 | 多 Scope 隔离 | ❌ | ✅ |
 | 噪声过滤 | ❌ | ✅ |
 | 自适应检索 | ❌ | ✅ |
+| 记忆原地更新 | ❌ | ✅ |
+| 自动备份（每日 JSONL） | ❌ | ✅ |
+| Embedding 缓存（LRU） | ❌ | ✅ |
 | 管理 CLI | ❌ | ✅ |
 | Session 记忆 | ❌ | ✅ |
 | Task-aware Embedding | ❌ | ✅ |
@@ -45,7 +46,7 @@ OpenClaw 内置的 `memory-lancedb` 插件仅提供基本的向量搜索。**ope
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   index.ts (入口)                        │
-│  插件注册 · 配置解析 · 生命周期钩子 · 自动捕获/回忆       │
+│  插件注册 · 配置解析 · 生命周期钩子 · 自动备份服务        │
 └────────┬──────────┬──────────┬──────────┬───────────────┘
          │          │          │          │
     ┌────▼───┐ ┌────▼───┐ ┌───▼────┐ ┌──▼──────────┐
@@ -68,15 +69,15 @@ OpenClaw 内置的 `memory-lancedb` 插件仅提供基本的向量搜索。**ope
 
 | 文件 | 用途 |
 |------|------|
-| `index.ts` | 插件入口。注册到 OpenClaw Plugin API，解析配置，挂载 `before_agent_start`（自动回忆）、`agent_end`（自动捕获）、`command:new`（Session 记忆）等钩子 |
+| `index.ts` | 插件入口。注册到 OpenClaw Plugin API，解析配置，挂载 `before_agent_start`（自动回忆）、`agent_end`（自动捕获）、`command:new`（Session 记忆）等钩子。管理每日自动备份服务 |
 | `openclaw.plugin.json` | 插件元数据 + 完整 JSON Schema 配置声明（含 `uiHints`） |
 | `package.json` | NPM 包信息，依赖 `@lancedb/lancedb`、`openai`、`@sinclair/typebox` |
 | `cli.ts` | CLI 命令实现：`memory list/search/stats/delete/delete-bulk/export/import/reembed/migrate` |
 | `src/store.ts` | LanceDB 存储层。表创建 / FTS 索引 / Vector Search / BM25 Search / CRUD / 批量删除 / 统计 |
-| `src/embedder.ts` | Embedding 抽象层。兼容 OpenAI API 的任意 Provider（OpenAI、Gemini、Jina、Ollama 等），支持 task-aware embedding（`taskQuery`/`taskPassage`） |
-| `src/retriever.ts` | 混合检索引擎。Vector + BM25 → RRF 融合 → Jina Cross-Encoder Rerank → Recency Boost → Importance Weight → Length Norm → Time Decay → Hard Min Score → Noise Filter → MMR Diversity |
+| `src/embedder.ts` | Embedding 抽象层。兼容 OpenAI API 的任意 Provider（OpenAI、Gemini、Jina、Ollama 等），支持 task-aware embedding（`taskQuery`/`taskPassage`）和 LRU 缓存（256 条目，30 分钟 TTL） |
+| `src/retriever.ts` | 混合检索引擎。Vector + BM25 → RRF 融合 → Rerank（Jina / SiliconFlow / 轻量级）→ Recency Boost → Importance Weight → Length Norm → Time Decay → Hard Min Score → Noise Filter → MMR Diversity |
 | `src/scopes.ts` | 多 Scope 访问控制。支持 `global`、`agent:<id>`、`custom:<name>`、`project:<id>`、`user:<id>` 等 Scope 模式 |
-| `src/tools.ts` | Agent 工具定义：`memory_recall`、`memory_store`、`memory_forget`（核心）+ `memory_stats`、`memory_list`（管理） |
+| `src/tools.ts` | Agent 工具定义：`memory_recall`、`memory_store`、`memory_forget`、`memory_update`（核心）+ `memory_stats`、`memory_list`（管理，需开启） |
 | `src/noise-filter.ts` | 噪声过滤器。过滤 Agent 拒绝回复、Meta 问题、寒暄等低质量记忆 |
 | `src/adaptive-retrieval.ts` | 自适应检索。判断 query 是否需要触发记忆检索（跳过问候、命令、简单确认等） |
 | `src/migrate.ts` | 迁移工具。从旧版 `memory-lancedb` 插件迁移数据到 Pro 版 |
@@ -98,11 +99,19 @@ Query → BM25 FTS ─────┘
 - **融合策略**: Vector score 为基础，BM25 命中给予 15% 加成（非传统 RRF，经过调优）
 - **可配置权重**: `vectorWeight`、`bm25Weight`、`minScore`
 
-### 2. 跨编码器 Rerank
+### 2. 多 Reranker 支持
 
-- **Jina Reranker API**: `jina-reranker-v2-base-multilingual`（5s 超时保护）
-- **混合评分**: 60% cross-encoder score + 40% 原始融合分
-- **降级策略**: API 失败时回退到 cosine similarity rerank
+三种重排策略，支持优雅降级：
+
+| 模式 | 提供商 | 模型 | 超时 | 适用场景 |
+|------|--------|------|------|----------|
+| `cross-encoder` | Jina Reranker API | `jina-reranker-v2-base-multilingual` | 5s | 精度最高，多语言 |
+| `siliconflow` | SiliconFlow API | `BAAI/bge-reranker-v2-m3` | 10s | 性价比高，中文支持好 |
+| `lightweight` | 本地 cosine 相似度 | — | — | 零延迟，无需 API |
+| `none` | 禁用 | — | — | 最快，仅向量评分 |
+
+- **混合评分**: 60% cross-encoder/reranker 分数 + 40% 原始融合分
+- **降级策略**: API 失败或超时时，自动回退到轻量级 cosine similarity rerank
 
 ### 3. 多层评分管线
 
@@ -134,17 +143,51 @@ Query → BM25 FTS ─────┘
 - 过滤 Meta 问题（"do you remember"）
 - 过滤寒暄（"hi"、"hello"、"HEARTBEAT"）
 
-### 7. Session 记忆
+### 7. 自动备份
+
+- 每日自动将所有记忆导出为 JSONL 格式
+- 备份目录：`{dbPath}/../backups/memory-backup-{date}.jsonl`
+- 保留最近 7 个备份，旧备份自动清理
+- 插件启动 1 分钟后执行首次备份，之后每 24 小时一次
+
+### 8. Session 记忆
 
 - `/new` 命令触发时可保存上一个 Session 的对话摘要到 LanceDB
 - 默认关闭（`enabled: false`），因为 OpenClaw 已有原生 .jsonl 会话保存
 - 开启会导致大段摘要污染检索质量，建议仅在需要语义搜索历史会话时开启
 - 可配置消息数量（默认 15 条）
 
-### 8. 自动捕获 & 自动回忆
+### 9. 自动捕获 & 自动回忆
 
 - **Auto-Capture**（`agent_end` hook）: 从对话中提取 preference/fact/decision/entity，去重后存储（每次最多 3 条）
-- **Auto-Recall**（`before_agent_start` hook）: 注入 `<relevant-memories>` 上下文（最多 3 条）
+  - 可选择同时捕获 Assistant 消息（`captureAssistant: true`）
+- **Auto-Recall**（`before_agent_start` hook）: 注入 `<relevant-memories>` 上下文（最多 3 条），标注来源（vector/BM25/reranked）
+
+### 10. Embedding 缓存
+
+- LRU 缓存，256 条目，30 分钟 TTL
+- 减少重复或相似 Embedding 的 API 调用
+- 对所有 Embedding 操作（query、passage、batch）透明生效
+
+---
+
+## Agent 工具
+
+### 核心工具（始终启用）
+
+| 工具 | 参数 | 说明 |
+|------|------|------|
+| `memory_recall` | `query`（必需）、`limit`（默认 5，最大 20）、`scope`、`category` | 使用混合检索搜索记忆，返回带来源标记的结果 |
+| `memory_store` | `text`（必需）、`importance`（0-1，默认 0.7）、`category`、`scope` | 保存记忆。自动去重（相似度 > 0.98）、噪声过滤 |
+| `memory_forget` | `query` 或 `memoryId`、`scope` | 删除记忆。支持搜索或直接 ID 删除，模糊匹配时返回候选列表 |
+| `memory_update` | `memoryId`（必需）、`text`、`importance`、`category` | 原地更新记忆。保留原始时间戳，文本更新时自动重新嵌入 |
+
+### 管理工具（需 `enableManagementTools: true`）
+
+| 工具 | 参数 | 说明 |
+|------|------|------|
+| `memory_stats` | `scope` | 获取统计信息：总数、Scope 分布、类别分布、检索模式 |
+| `memory_list` | `limit`（默认 10，最大 50）、`scope`、`category`、`offset` | 列出最近记忆，按时间戳降序 |
 
 ---
 
@@ -154,8 +197,8 @@ Query → BM25 FTS ─────┘
 
 ```bash
 cd /path/to/your/openclaw/workspace
-git clone https://github.com/win4r/memory-lancedb-pro.git plugins/memory-lancedb-pro
-cd plugins/memory-lancedb-pro
+git clone https://github.com/win4r/openclaw-plugins-memory-lancedb.git plugins/openclaw-plugins-memory-lancedb
+cd plugins/openclaw-plugins-memory-lancedb
 npm install
 ```
 
@@ -165,10 +208,10 @@ npm install
 {
   "plugins": {
     "load": {
-      "paths": ["plugins/memory-lancedb-pro"]
+      "paths": ["plugins/openclaw-plugins-memory-lancedb"]
     },
     "entries": {
-      "memory-lancedb-pro": {
+      "openclaw-plugins-memory-lancedb": {
         "enabled": true,
         "config": {
           "embedding": {
@@ -184,7 +227,7 @@ npm install
       }
     },
     "slots": {
-      "memory": "memory-lancedb-pro"
+      "memory": "openclaw-plugins-memory-lancedb"
     }
   }
 }
@@ -219,6 +262,8 @@ openclaw gateway restart
   "dbPath": "~/.openclaw/memory/lancedb-pro",
   "autoCapture": true,
   "autoRecall": true,
+  "captureAssistant": false,
+  "enableManagementTools": false,
   "retrieval": {
     "mode": "hybrid",
     "vectorWeight": 0.7,
@@ -226,7 +271,9 @@ openclaw gateway restart
     "minScore": 0.3,
     "rerank": "cross-encoder",
     "rerankApiKey": "jina_xxx",
+    "rerankSFApiKey": "sf_xxx",
     "rerankModel": "jina-reranker-v2-base-multilingual",
+    "rerankBaseURL": "https://api.siliconflow.cn/v1",
     "candidatePoolSize": 20,
     "recencyHalfLifeDays": 14,
     "recencyWeight": 0.1,
@@ -235,7 +282,6 @@ openclaw gateway restart
     "hardMinScore": 0.35,
     "timeDecayHalfLifeDays": 60
   },
-  "enableManagementTools": false,
   "scopes": {
     "default": "global",
     "definitions": {
@@ -254,6 +300,39 @@ openclaw gateway restart
 ```
 
 </details>
+
+### 配置参考
+
+| 键 | 类型 | 默认值 | 说明 |
+|----|------|--------|------|
+| `embedding.apiKey` | string | — | **必需。** Embedding API key，支持 `${ENV_VAR}` 占位符 |
+| `embedding.model` | string | `text-embedding-3-small` | Embedding 模型名称 |
+| `embedding.baseURL` | string | — | OpenAI 兼容 API 的 Base URL |
+| `embedding.dimensions` | number | 自动检测 | 向量维度（自动检测或手动指定） |
+| `embedding.taskQuery` | string | — | 查询任务类型（如 `retrieval.query`） |
+| `embedding.taskPassage` | string | — | 文档任务类型（如 `retrieval.passage`） |
+| `embedding.normalized` | boolean | false | 请求归一化嵌入（Jina v5） |
+| `dbPath` | string | `~/.openclaw/memory/lancedb-pro` | 数据库存储路径 |
+| `autoCapture` | boolean | `true` | 自动从对话中捕获记忆 |
+| `autoRecall` | boolean | `true` | Agent 启动前自动召回相关记忆 |
+| `captureAssistant` | boolean | `false` | 同时捕获 Assistant 消息（不仅限 User） |
+| `enableManagementTools` | boolean | `false` | 启用 `memory_stats` 和 `memory_list` 工具 |
+| `retrieval.mode` | string | `hybrid` | `"hybrid"` 或 `"vector"` |
+| `retrieval.vectorWeight` | number | 0.7 | 融合时向量搜索的权重 |
+| `retrieval.bm25Weight` | number | 0.3 | 融合时 BM25 搜索的权重 |
+| `retrieval.minScore` | number | 0.3 | 最低分数阈值（rerank 前） |
+| `retrieval.rerank` | string | `cross-encoder` | `"cross-encoder"`、`"siliconflow"`、`"lightweight"` 或 `"none"` |
+| `retrieval.rerankApiKey` | string | — | Jina Reranker API key |
+| `retrieval.rerankSFApiKey` | string | — | SiliconFlow API key |
+| `retrieval.rerankModel` | string | 按提供商默认 | Reranker 模型名称 |
+| `retrieval.rerankBaseURL` | string | 按提供商默认 | 自定义 rerank API base URL |
+| `retrieval.candidatePoolSize` | number | 20 | Rerank 前的候选数量 |
+| `retrieval.recencyHalfLifeDays` | number | 14 | 时效加成半衰期（0 = 禁用） |
+| `retrieval.recencyWeight` | number | 0.1 | 时效加成权重 |
+| `retrieval.filterNoise` | boolean | `true` | 对结果启用噪声过滤 |
+| `retrieval.lengthNormAnchor` | number | 500 | 长度归一化锚点（字符数，0 = 禁用） |
+| `retrieval.hardMinScore` | number | 0.35 | 硬最低分数（管线后） |
+| `retrieval.timeDecayHalfLifeDays` | number | 60 | 时间衰减半衰期（0 = 禁用） |
 
 ### Embedding 提供商
 
