@@ -119,7 +119,7 @@ Query → BM25 FTS ─────┘
 |------|------|------|
 | **时效加成** | `exp(-ageDays / halfLife) * weight` | 新记忆分数更高（默认半衰期 14 天，权重 0.10） |
 | **重要性加权** | `score *= (0.7 + 0.3 * importance)` | importance=1.0 → ×1.0，importance=0.5 → ×0.85 |
-| **长度归一化** | `score *= 1 / (1 + 0.5 * log2(len/anchor))` | 防止长条目凭关键词密度霸占所有查询（锚点：500 字符） |
+| **长度归一化** | `score *= 1 / (1 + 0.5 * log2(len/anchor))` | 短条目（≤锚点）不受惩罚，长条目被降权（锚点：500 字符） |
 | **时间衰减** | `score *= 0.5 + 0.5 * exp(-ageDays / halfLife)` | 旧条目逐渐降权，下限 0.5×（60 天半衰期） |
 | **硬最低分** | 低于阈值直接丢弃 | 移除不相关结果（默认 0.35） |
 | **MMR 多样性** | cosine 相似度 > 0.85 → 降级 | 防止近似重复结果 |
@@ -362,7 +362,7 @@ openclaw memory stats [--scope global] [--json]
 # 按 ID 删除记忆（支持 8+ 字符前缀）
 openclaw memory delete <id>
 
-# 批量删除
+# 批量删除（--scope 必填，至少指定一个 scope）
 openclaw memory delete-bulk --scope global [--before 2025-01-01] [--dry-run]
 
 # 导出 / 导入
@@ -374,7 +374,7 @@ openclaw memory reembed --source-db /path/to/old-db [--batch-size 32] [--skip-ex
 
 # 从内置 memory-lancedb 迁移
 openclaw memory migrate check [--source /path]
-openclaw memory migrate run [--source /path] [--dry-run] [--skip-existing]
+openclaw memory migrate run [--source /path] [--default-scope global] [--dry-run] [--skip-existing]
 openclaw memory migrate verify [--source /path]
 ```
 

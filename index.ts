@@ -686,7 +686,7 @@ function parsePluginConfig(value: unknown): PluginConfig {
       enableManagementTools: cfg.enableManagementTools === true,
       sessionMemory: typeof cfg.sessionMemory === "object" && cfg.sessionMemory !== null
         ? {
-            enabled: (cfg.sessionMemory as Record<string, unknown>).enabled !== false,
+            enabled: (cfg.sessionMemory as Record<string, unknown>).enabled === true,
             messageCount: typeof (cfg.sessionMemory as Record<string, unknown>).messageCount === "number"
               ? (cfg.sessionMemory as Record<string, unknown>).messageCount as number
               : undefined,

@@ -121,7 +121,7 @@ Three reranking strategies with graceful degradation:
 |-------|---------|--------|
 | **Recency Boost** | `exp(-ageDays / halfLife) * weight` | Newer memories score higher (default: 14-day half-life, 0.10 weight) |
 | **Importance Weight** | `score *= (0.7 + 0.3 * importance)` | importance=1.0 → ×1.0, importance=0.5 → ×0.85 |
-| **Length Normalization** | `score *= 1 / (1 + 0.5 * log2(len/anchor))` | Prevents long entries from dominating (anchor: 500 chars) |
+| **Length Normalization** | `score *= 1 / (1 + 0.5 * log2(len/anchor))` | Short entries (≤anchor) not penalized; long entries penalized (anchor: 500 chars) |
 | **Time Decay** | `score *= 0.5 + 0.5 * exp(-ageDays / halfLife)` | Old entries gradually lose weight, floor at 0.5× (60-day half-life) |
 | **Hard Min Score** | Discard if `score < threshold` | Removes irrelevant results (default: 0.35) |
 | **MMR Diversity** | Cosine similarity > 0.85 → demoted | Prevents near-duplicate results |
@@ -363,7 +363,7 @@ openclaw memory stats [--scope global] [--json]
 # Delete a memory by ID (supports 8+ char prefix)
 openclaw memory delete <id>
 
-# Bulk delete with filters
+# Bulk delete with filters (--scope required, at least one scope)
 openclaw memory delete-bulk --scope global [--before 2025-01-01] [--dry-run]
 
 # Export / Import
@@ -375,7 +375,7 @@ openclaw memory reembed --source-db /path/to/old-db [--batch-size 32] [--skip-ex
 
 # Migrate from built-in memory-lancedb
 openclaw memory migrate check [--source /path]
-openclaw memory migrate run [--source /path] [--dry-run] [--skip-existing]
+openclaw memory migrate run [--source /path] [--default-scope global] [--dry-run] [--skip-existing]
 openclaw memory migrate verify [--source /path]
 ```
 

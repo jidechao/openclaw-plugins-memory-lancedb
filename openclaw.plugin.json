@@ -175,7 +175,7 @@
         "properties": {
           "enabled": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Store session summaries to LanceDB on /new command (replaces built-in session-memory hook)"
           },
           "messageCount": {

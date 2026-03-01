@@ -34,10 +34,10 @@ export interface RetrievalConfig {
   rerankBaseURL?: string;
   /**
    * Length normalization: penalize long entries that dominate via sheer keyword
-   * density. Formula: score *= 1 / (1 + log2(charLen / anchor)).
-   * anchor = reference length (default: 500 chars). Entries shorter than anchor
-   * get a slight boost; longer entries get penalized progressively.
-   * Set 0 to disable. (default: 300)
+   * density. Formula: score *= 1 / (1 + 0.5 * log2(charLen / anchor)).
+   * anchor = reference length (default: 500 chars). Entries at or below anchor
+   * are not penalized; longer entries get penalized progressively.
+   * Set 0 to disable.
    */
   lengthNormAnchor: number;
   /**
@@ -567,9 +567,8 @@ export class MemoryRetriever {
   /**
    * Length normalization: penalize long entries that dominate search results
    * via sheer keyword density and broad semantic coverage.
-   * Short, focused entries (< anchor) get a slight boost.
-   * Long, sprawling entries (> anchor) get penalized.
-   * Formula: score *= 1 / (1 + log2(charLen / anchor))
+   * Short entries (<= anchor) are not penalized; long entries (> anchor) get penalized.
+   * Formula: score *= 1 / (1 + 0.5 * log2(charLen / anchor))
    */
   private applyLengthNormalization(results: RetrievalResult[]): RetrievalResult[] {
     const anchor = this.config.lengthNormAnchor;
@@ -628,7 +627,7 @@ export class MemoryRetriever {
    * relevant (high score) and diverse (low similarity to already-selected).
    *
    * Uses cosine similarity between memory vectors. If two memories have
-   * cosine similarity > threshold (default 0.92), the lower-scored one
+   * cosine similarity > threshold (default 0.85), the lower-scored one
    * is demoted to the end rather than removed entirely.
    *
    * This prevents top-k from being filled with near-identical entries
